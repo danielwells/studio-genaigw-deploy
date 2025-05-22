@@ -52,6 +52,17 @@ check_prerequisites() {
     echo "✓ yq utility v4.40.5 is installed"
 }
 
+# Function to generate a globally unique S3 bucket name
+generate_unique_bucket_name() {
+    local account_id=$(aws sts get-caller-identity --query Account --output text)
+    local region=$(aws configure get region)
+    if [ -z "$region" ]; then
+        region="us-east-1"
+    fi
+    local timestamp=$(date +%Y%m%d%H%M%S)
+    echo "genai-gateway-tf-state-${account_id}-${region}-${timestamp}"
+}
+
 # Function to clone the GenAI Gateway repository
 clone_repository() {
     echo "Cloning GenAI Gateway repository..."
@@ -82,6 +93,14 @@ setup_environment() {
     else
         echo "Using existing .env file"
     fi
+    
+    # Generate a unique S3 bucket name for Terraform state
+    TERRAFORM_S3_BUCKET_NAME=$(generate_unique_bucket_name)
+    echo "Generated unique S3 bucket name: $TERRAFORM_S3_BUCKET_NAME"
+    
+    # Update the .env file with the unique bucket name
+    sed -i "s/^TERRAFORM_S3_BUCKET_NAME=.*/TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"/" .env
+    echo "Updated .env file with S3 bucket name"
     
     # Note: We don't need to create the S3 bucket - the deploy.sh script handles that
 }
