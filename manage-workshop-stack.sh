@@ -6,10 +6,12 @@
 set -e  # Exit immediately if a command exits with a non-zero status
 
 STACK_OPERATION=$1
+# Convert operation to lowercase for case-insensitive comparison
+STACK_OPERATION_LOWER=$(echo "$STACK_OPERATION" | tr '[:upper:]' '[:lower:]')
 REPO_DIR="genai-gateway"
 CURRENT_DIR=$(pwd)
 
-echo "Starting operation: $STACK_OPERATION"
+echo "Starting operation: $STACK_OPERATION (converted to: $STACK_OPERATION_LOWER for processing)"
 
 # Function to check if required tools are installed
 check_prerequisites() {
@@ -108,6 +110,30 @@ setup_environment() {
     fi
 }
 
+# Function to enable Bedrock models
+enable_bedrock_models() {
+    echo "Enabling Amazon Bedrock models..."
+    
+    # List of models to enable
+    MODELS=(
+        "anthropic.claude-3-sonnet-20240229-v1:0"
+        "anthropic.claude-3-haiku-20240307-v1:0"
+        "anthropic.claude-instant-v1"
+        "amazon.titan-text-express-v1"
+        "amazon.titan-text-lite-v1"
+        "cohere.command-text-v14"
+        "meta.llama2-13b-chat-v1"
+    )
+    
+    # Enable each model
+    for MODEL in "${MODELS[@]}"; do
+        echo "Enabling model: $MODEL"
+        aws bedrock enable-model --model-id "$MODEL" || echo "Note: Model $MODEL may already be enabled or not available in this region"
+    done
+    
+    echo "Bedrock models enabled"
+}
+
 # Function to deploy the GenAI Gateway
 deploy_genai_gateway() {
     echo "Deploying GenAI Gateway..."
@@ -121,6 +147,9 @@ deploy_genai_gateway() {
         echo "Assets Bucket Prefix: $ASSETS_BUCKET_PREFIX"
     fi
     
+    # Enable Bedrock models
+    enable_bedrock_models
+    
     # Run the deploy script
     chmod +x deploy.sh
     ./deploy.sh
@@ -128,6 +157,36 @@ deploy_genai_gateway() {
     if [ $? -ne 0 ]; then
         echo "Error: Deployment failed"
         exit 1
+    fi
+    
+    # Capture and store Terraform outputs
+    if [ -d "litellm-terraform-stack" ]; then
+        echo "Capturing Terraform outputs..."
+        cd litellm-terraform-stack
+        
+        # Create outputs directory in assets bucket if running in Workshop Studio
+        if [ "$IS_WORKSHOP_STUDIO_ENV" == "yes" ] && [ ! -z "$ASSETS_BUCKET_NAME" ] && [ ! -z "$ASSETS_BUCKET_PREFIX" ]; then
+            terraform output -json > /tmp/tf_outputs.json
+            
+            # Create a markdown file with outputs
+            cat > /tmp/workshop-outputs.md << EOF
+# GenAI Gateway Workshop Outputs
+
+## API Endpoints
+- Gateway API: $(jq -r '.api_endpoint.value // "N/A"' /tmp/tf_outputs.json)
+- Admin UI: $(jq -r '.admin_ui_url.value // "N/A"' /tmp/tf_outputs.json)
+
+## Resources
+- ECS Cluster: $(jq -r '.ecs_cluster_name.value // "N/A"' /tmp/tf_outputs.json)
+- RDS Instance: $(jq -r '.rds_instance_id.value // "N/A"' /tmp/tf_outputs.json)
+EOF
+            
+            # Upload to S3 bucket
+            aws s3 cp /tmp/workshop-outputs.md s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}workshop-outputs.md
+            echo "Workshop outputs saved to s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}workshop-outputs.md"
+        fi
+        
+        cd ..
     fi
     
     echo "Deployment completed successfully"
@@ -165,7 +224,7 @@ undeploy_genai_gateway() {
 # Main script execution
 check_prerequisites
 
-if [[ "$STACK_OPERATION" == "create" || "$STACK_OPERATION" == "update" ]]; then
+if [[ "$STACK_OPERATION_LOWER" == "create" || "$STACK_OPERATION_LOWER" == "update" ]]; then
     clone_repository
     setup_environment
     deploy_genai_gateway
@@ -173,7 +232,7 @@ if [[ "$STACK_OPERATION" == "create" || "$STACK_OPERATION" == "update" ]]; then
     # Return to the original directory
     cd "$CURRENT_DIR"
     
-elif [ "$STACK_OPERATION" == "delete" ]; then
+elif [ "$STACK_OPERATION_LOWER" == "delete" ]; then
     clone_repository
     undeploy_genai_gateway
     
@@ -182,7 +241,7 @@ elif [ "$STACK_OPERATION" == "delete" ]; then
     
 else
     echo "Invalid stack operation: $STACK_OPERATION"
-    echo "Valid operations are: create, update, delete"
+    echo "Valid operations are: create, update, delete (case insensitive)"
     exit 1
 fi
 
