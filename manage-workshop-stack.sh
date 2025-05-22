@@ -78,6 +78,31 @@ clone_repository() {
     cd "$REPO_DIR"
 }
 
+# Function to update Dockerfiles to use ECR Public Gallery for Python images
+update_dockerfiles() {
+    echo "Updating Dockerfiles to use ECR Public Gallery for Python images..."
+    
+    # Authenticate to ECR Public Gallery
+    echo "Authenticating to ECR Public Gallery..."
+    aws ecr-public get-login-password --region us-east-1 | docker login --username AWS --password-stdin public.ecr.aws
+    
+    # Update middleware Dockerfile
+    if [ -f "middleware/Dockerfile" ]; then
+        echo "Updating middleware/Dockerfile..."
+        sed -i 's|FROM python:3.11-slim|FROM public.ecr.aws/docker/library/python:3.11-slim|g' middleware/Dockerfile
+        echo "✓ Updated middleware/Dockerfile to use ECR Public Gallery"
+    fi
+    
+    # Update load testing Dockerfile
+    if [ -f "litellm-fake-llm-load-testing-server-terraform/docker/Dockerfile" ]; then
+        echo "Updating litellm-fake-llm-load-testing-server-terraform/docker/Dockerfile..."
+        sed -i 's|FROM python:3.13-slim|FROM public.ecr.aws/docker/library/python:3.13-slim|g' litellm-fake-llm-load-testing-server-terraform/docker/Dockerfile
+        echo "✓ Updated load testing Dockerfile to use ECR Public Gallery"
+    fi
+    
+    echo "Dockerfiles updated to use ECR Public Gallery for Python images"
+}
+
 # Function to setup environment configuration
 setup_environment() {
     echo "Setting up environment configuration..."
@@ -117,6 +142,9 @@ deploy_genai_gateway() {
         echo "Assets Bucket Name: $ASSETS_BUCKET_NAME"
         echo "Assets Bucket Prefix: $ASSETS_BUCKET_PREFIX"
     fi
+    
+    # Update Dockerfiles to use ECR Public Gallery for Python images
+    update_dockerfiles
     
     # Run the deploy script
     chmod +x deploy.sh
