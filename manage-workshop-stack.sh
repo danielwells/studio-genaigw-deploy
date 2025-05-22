@@ -52,17 +52,6 @@ check_prerequisites() {
     echo "✓ yq utility v4.40.5 is installed"
 }
 
-# Function to generate a globally unique S3 bucket name
-generate_unique_bucket_name() {
-    local account_id=$(aws sts get-caller-identity --query Account --output text)
-    local region=$(aws configure get region)
-    if [ -z "$region" ]; then
-        region="us-east-1"
-    fi
-    local timestamp=$(date +%Y%m%d%H%M%S)
-    echo "genai-gateway-tf-state-${account_id}-${region}-${timestamp}"
-}
-
 # Function to clone the GenAI Gateway repository
 clone_repository() {
     echo "Cloning GenAI Gateway repository..."
@@ -89,51 +78,13 @@ setup_environment() {
             echo "Error: Failed to copy .env.template to .env"
             exit 1
         fi
-    fi
-    
-    # Generate a unique S3 bucket name for Terraform state
-    TERRAFORM_S3_BUCKET_NAME=$(generate_unique_bucket_name)
-    echo "Generated unique S3 bucket name: $TERRAFORM_S3_BUCKET_NAME"
-    
-    # Update the .env file with the unique bucket name
-    sed -i "s/^TERRAFORM_S3_BUCKET_NAME=.*/TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"/" .env
-    
-    # Create the S3 bucket if it doesn't exist
-    if ! aws s3api head-bucket --bucket "$TERRAFORM_S3_BUCKET_NAME" 2>/dev/null; then
-        echo "Creating S3 bucket for Terraform state: $TERRAFORM_S3_BUCKET_NAME"
-        aws s3api create-bucket --bucket "$TERRAFORM_S3_BUCKET_NAME" --region $(aws configure get region)
-        
-        # Enable versioning on the bucket
-        aws s3api put-bucket-versioning --bucket "$TERRAFORM_S3_BUCKET_NAME" --versioning-configuration Status=Enabled
+        echo "Created .env file from template"
     else
-        echo "S3 bucket already exists: $TERRAFORM_S3_BUCKET_NAME"
+        echo "Using existing .env file"
     fi
+    
+    # Note: We don't need to create the S3 bucket - the deploy.sh script handles that
 }
-
-# Function to enable Bedrock models
-# Commented out for now to focus on case-insensitive operation handling
-# enable_bedrock_models() {
-#     echo "Enabling Amazon Bedrock models..."
-#     
-#     # List of models to enable
-#     MODELS=(
-#         "anthropic.claude-3-sonnet-20240229-v1:0"
-#         "anthropic.claude-3-haiku-20240307-v1:0"
-#         "anthropic.claude-instant-v1"
-#         "amazon.titan-text-express-v1"
-#         "amazon.titan-text-lite-v1"
-#         "cohere.command-text-v14"
-#         "meta.llama2-13b-chat-v1"
-#     )
-#     
-#     # Enable each model
-#     for MODEL in "${MODELS[@]}"; do
-#         echo "Enabling model: $MODEL"
-#         aws bedrock enable-model --model-id "$MODEL" || echo "Note: Model $MODEL may already be enabled or not available in this region"
-#     done
-#     
-#     echo "Bedrock models enabled"
-# }
 
 # Function to deploy the GenAI Gateway
 deploy_genai_gateway() {
@@ -147,9 +98,6 @@ deploy_genai_gateway() {
         echo "Assets Bucket Name: $ASSETS_BUCKET_NAME"
         echo "Assets Bucket Prefix: $ASSETS_BUCKET_PREFIX"
     fi
-    
-    # Enable Bedrock models - commented out for now
-    # enable_bedrock_models
     
     # Run the deploy script
     chmod +x deploy.sh
@@ -204,19 +152,6 @@ undeploy_genai_gateway() {
     if [ $? -ne 0 ]; then
         echo "Error: Undeployment failed"
         exit 1
-    fi
-    
-    # Get the Terraform S3 bucket name from .env file
-    TERRAFORM_S3_BUCKET_NAME=$(grep TERRAFORM_S3_BUCKET_NAME .env | cut -d '"' -f 2)
-    
-    if [ -n "$TERRAFORM_S3_BUCKET_NAME" ]; then
-        echo "Emptying and deleting Terraform state S3 bucket: $TERRAFORM_S3_BUCKET_NAME"
-        
-        # Empty the bucket
-        aws s3 rm "s3://$TERRAFORM_S3_BUCKET_NAME" --recursive
-        
-        # Delete the bucket
-        aws s3api delete-bucket --bucket "$TERRAFORM_S3_BUCKET_NAME"
     fi
     
     echo "Undeployment completed successfully"
