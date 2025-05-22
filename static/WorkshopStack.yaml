@@ -188,7 +188,7 @@ Resources:
             "phases": {
               "install": {
                 "runtime-versions": {
-                  "python": "3.9"
+                  "python": "3.11"
                 },
                 "commands": [
                   "echo Installing dependencies...",
@@ -215,17 +215,18 @@ Resources:
               "build": {
                 "commands": [
                   "mkdir workshop && cd workshop",
-                  "git clone --single-branch --branch $REPO_BRANCH_NAME $REPO_URL .",
-                  "echo $EVENT_REQUEST_TYPE",
-                  "./manage-workshop-stack.sh $EVENT_REQUEST_TYPE"
+                  "echo \"Cloning repository from: ${REPO_URL} branch: ${REPO_BRANCH_NAME}\"",
+                  "git clone --single-branch --branch \"${REPO_BRANCH_NAME}\" \"${REPO_URL}\" .",
+                  "echo \"Request type: ${EVENT_REQUEST_TYPE}\"",
+                  "./manage-workshop-stack.sh \"${EVENT_REQUEST_TYPE}\""
                 ]
               },
               "post_build": {
                 "commands": [
                   "if [ \"$CODEBUILD_BUILD_SUCCEEDING\" == \"1\" ]; then export STATUS=\"SUCCESS\"; fi",
                   "if [ \"$CODEBUILD_BUILD_SUCCEEDING\" != \"1\" ]; then export STATUS=\"FAILED\"; fi",
-                  'export JSON_DATA="{\"Status\" : \"$STATUS\", \"Reason\" : \"See the details in CloudWatch Log Stream: $CONTEXT_LOG_STREAM_NAME\", \"StackId\" : \"$EVENT_STACK_ID\", \"PhysicalResourceId\" : \"$CONTEXT_LOG_STREAM_NAME\", \"RequestId\" : \"$EVENT_REQUEST_ID\", \"LogicalResourceId\" : \"$EVENT_LOGICAL_RESOURCE_ID\" }"',
-                  'echo "$JSON_DATA"',
+                  "export JSON_DATA=\"{\\\"Status\\\" : \\\"$STATUS\\\", \\\"Reason\\\" : \\\"See the details in CloudWatch Log Stream: $CONTEXT_LOG_STREAM_NAME\\\", \\\"StackId\\\" : \\\"$EVENT_STACK_ID\\\", \\\"PhysicalResourceId\\\" : \\\"$CONTEXT_LOG_STREAM_NAME\\\", \\\"RequestId\\\" : \\\"$EVENT_REQUEST_ID\\\", \\\"LogicalResourceId\\\" : \\\"$EVENT_LOGICAL_RESOURCE_ID\\\" }\"",
+                  "echo \"$JSON_DATA\"",
                   "curl -X PUT --data-binary \"$JSON_DATA\" \"$EVENT_RESPONSE_URL\""
                 ]
               }
