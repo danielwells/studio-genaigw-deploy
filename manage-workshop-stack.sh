@@ -111,28 +111,29 @@ setup_environment() {
 }
 
 # Function to enable Bedrock models
-enable_bedrock_models() {
-    echo "Enabling Amazon Bedrock models..."
-    
-    # List of models to enable
-    MODELS=(
-        "anthropic.claude-3-sonnet-20240229-v1:0"
-        "anthropic.claude-3-haiku-20240307-v1:0"
-        "anthropic.claude-instant-v1"
-        "amazon.titan-text-express-v1"
-        "amazon.titan-text-lite-v1"
-        "cohere.command-text-v14"
-        "meta.llama2-13b-chat-v1"
-    )
-    
-    # Enable each model
-    for MODEL in "${MODELS[@]}"; do
-        echo "Enabling model: $MODEL"
-        aws bedrock enable-model --model-id "$MODEL" || echo "Note: Model $MODEL may already be enabled or not available in this region"
-    done
-    
-    echo "Bedrock models enabled"
-}
+# Commented out for now to focus on case-insensitive operation handling
+# enable_bedrock_models() {
+#     echo "Enabling Amazon Bedrock models..."
+#     
+#     # List of models to enable
+#     MODELS=(
+#         "anthropic.claude-3-sonnet-20240229-v1:0"
+#         "anthropic.claude-3-haiku-20240307-v1:0"
+#         "anthropic.claude-instant-v1"
+#         "amazon.titan-text-express-v1"
+#         "amazon.titan-text-lite-v1"
+#         "cohere.command-text-v14"
+#         "meta.llama2-13b-chat-v1"
+#     )
+#     
+#     # Enable each model
+#     for MODEL in "${MODELS[@]}"; do
+#         echo "Enabling model: $MODEL"
+#         aws bedrock enable-model --model-id "$MODEL" || echo "Note: Model $MODEL may already be enabled or not available in this region"
+#     done
+#     
+#     echo "Bedrock models enabled"
+# }
 
 # Function to deploy the GenAI Gateway
 deploy_genai_gateway() {
@@ -147,8 +148,8 @@ deploy_genai_gateway() {
         echo "Assets Bucket Prefix: $ASSETS_BUCKET_PREFIX"
     fi
     
-    # Enable Bedrock models
-    enable_bedrock_models
+    # Enable Bedrock models - commented out for now
+    # enable_bedrock_models
     
     # Run the deploy script
     chmod +x deploy.sh
