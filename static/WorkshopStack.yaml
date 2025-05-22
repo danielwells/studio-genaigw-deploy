@@ -186,6 +186,32 @@ Resources:
               "shell": "bash"
             },
             "phases": {
+              "install": {
+                "runtime-versions": {
+                  "python": "3.9"
+                },
+                "commands": [
+                  "echo Installing dependencies...",
+                  "yum update -y",
+                  "yum install -y jq git",
+                  "echo Installing yq version 4.40.5...",
+                  "curl -L -o /usr/local/bin/yq https://github.com/mikefarah/yq/releases/download/v4.40.5/yq_linux_amd64",
+                  "chmod +x /usr/local/bin/yq",
+                  "echo Installing Terraform v1.5.7...",
+                  "curl -L -o /tmp/terraform.zip https://releases.hashicorp.com/terraform/1.5.7/terraform_1.5.7_linux_amd64.zip",
+                  "unzip /tmp/terraform.zip -d /usr/local/bin/",
+                  "chmod +x /usr/local/bin/terraform",
+                  "echo Installing Docker...",
+                  "curl -L -o /tmp/docker.tgz https://download.docker.com/linux/static/stable/x86_64/docker-24.0.6.tgz",
+                  "tar -xzvf /tmp/docker.tgz -C /tmp",
+                  "mv /tmp/docker/* /usr/local/bin/",
+                  "echo Verifying installations...",
+                  "docker --version",
+                  "aws --version",
+                  "yq --version",
+                  "terraform --version"
+                ]
+              },
               "build": {
                 "commands": [
                   "mkdir workshop && cd workshop",
