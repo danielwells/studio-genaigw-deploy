@@ -145,7 +145,7 @@ setup_environment_create() {
     echo "Generated unique S3 bucket name: $TERRAFORM_S3_BUCKET_NAME"
     
     # Update the .env file with the unique bucket name
-    sed -i "s/^TERRAFORM_S3_BUCKET_NAME=.*/TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"/" .env
+    sed -i "s|^TERRAFORM_S3_BUCKET_NAME=.*|TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"|" .env
     echo "Updated .env file with S3 bucket name"
 }
 
@@ -169,7 +169,7 @@ setup_environment_delete() {
     TERRAFORM_S3_BUCKET_NAME=$(find_existing_bucket)
     
     # Update the .env file with the existing bucket name
-    sed -i "s/^TERRAFORM_S3_BUCKET_NAME=.*/TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"/" .env
+    sed -i "s|^TERRAFORM_S3_BUCKET_NAME=.*|TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"|" .env
     echo "Updated .env file with existing S3 bucket name: $TERRAFORM_S3_BUCKET_NAME"
 }
 
