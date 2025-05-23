@@ -88,8 +88,6 @@ find_existing_bucket() {
     # Return just the bucket name without newline
     printf "%s" "$bucket"
 }
-    printf "%s" "$bucket"
-}
 
 # Function to clone the GenAI Gateway repository
 clone_repository() {
