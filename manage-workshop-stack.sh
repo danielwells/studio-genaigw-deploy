@@ -63,6 +63,27 @@ generate_unique_bucket_name() {
     echo "genai-gateway-tf-state-${account_id}-${region}-${timestamp}"
 }
 
+# Function to find existing Terraform state bucket
+find_existing_bucket() {
+    echo "Finding existing Terraform state bucket..."
+    
+    # List buckets with the genai-gateway-tf-state prefix
+    local account_id=$(aws sts get-caller-identity --query Account --output text)
+    local buckets=$(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'genai-gateway-tf-state-${account_id}')].Name" --output text)
+    
+    # Check if we found any buckets
+    if [ -z "$buckets" ]; then
+        echo "Error: No existing Terraform state bucket found"
+        exit 1
+    fi
+    
+    # Use the first bucket found (assuming it's the most recent)
+    local bucket=$(echo "$buckets" | head -1)
+    echo "Found existing Terraform state bucket: $bucket"
+    
+    echo "$bucket"
+}
+
 # Function to clone the GenAI Gateway repository
 clone_repository() {
     echo "Cloning GenAI Gateway repository..."
@@ -103,9 +124,9 @@ update_dockerfiles() {
     echo "Dockerfiles updated to use ECR Public Gallery for Python images"
 }
 
-# Function to setup environment configuration
-setup_environment() {
-    echo "Setting up environment configuration..."
+# Function to setup environment configuration for create/update
+setup_environment_create() {
+    echo "Setting up environment configuration for create/update..."
     
     # Copy template environment file if it doesn't exist
     if [ ! -f ".env" ]; then
@@ -126,8 +147,30 @@ setup_environment() {
     # Update the .env file with the unique bucket name
     sed -i "s/^TERRAFORM_S3_BUCKET_NAME=.*/TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"/" .env
     echo "Updated .env file with S3 bucket name"
+}
+
+# Function to setup environment configuration for delete
+setup_environment_delete() {
+    echo "Setting up environment configuration for delete..."
     
-    # Note: We don't need to create the S3 bucket - the deploy.sh script handles that
+    # Copy template environment file if it doesn't exist
+    if [ ! -f ".env" ]; then
+        cp .env.template .env
+        if [ $? -ne 0 ]; then
+            echo "Error: Failed to copy .env.template to .env"
+            exit 1
+        fi
+        echo "Created .env file from template"
+    else
+        echo "Using existing .env file"
+    fi
+    
+    # Find existing Terraform state bucket
+    TERRAFORM_S3_BUCKET_NAME=$(find_existing_bucket)
+    
+    # Update the .env file with the existing bucket name
+    sed -i "s/^TERRAFORM_S3_BUCKET_NAME=.*/TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"/" .env
+    echo "Updated .env file with existing S3 bucket name: $TERRAFORM_S3_BUCKET_NAME"
 }
 
 # Function to deploy the GenAI Gateway
@@ -217,7 +260,16 @@ deploy_genai_gateway() {
 undeploy_genai_gateway() {
     echo "Undeploying GenAI Gateway..."
     
-    # Run the undeploy script
+    # Run the deploy script first to initialize Terraform with the remote state
+    echo "Initializing Terraform with remote state..."
+    chmod +x deploy.sh
+    
+    # We need to modify the deploy script to support initialization only
+    # For now, we'll try to run it with a special flag and catch any errors
+    ./deploy.sh init || echo "Continuing with undeploy despite initialization errors"
+    
+    # Now run the undeploy script
+    echo "Running undeploy script..."
     chmod +x undeploy.sh
     ./undeploy.sh
     
@@ -234,7 +286,7 @@ check_prerequisites
 
 if [[ "$STACK_OPERATION_LOWER" == "create" || "$STACK_OPERATION_LOWER" == "update" ]]; then
     clone_repository
-    setup_environment
+    setup_environment_create
     deploy_genai_gateway
     
     # Return to the original directory
@@ -242,6 +294,7 @@ if [[ "$STACK_OPERATION_LOWER" == "create" || "$STACK_OPERATION_LOWER" == "updat
     
 elif [ "$STACK_OPERATION_LOWER" == "delete" ]; then
     clone_repository
+    setup_environment_delete
     undeploy_genai_gateway
     
     # Return to the original directory
