@@ -69,7 +69,10 @@ find_existing_bucket() {
     
     # List buckets with the genai-gateway-tf-state prefix
     local account_id=$(aws sts get-caller-identity --query Account --output text)
+    echo "DEBUG: Account ID: $account_id"
+    
     local buckets=$(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'genai-gateway-tf-state-${account_id}')].Name" --output text)
+    echo "DEBUG: Found buckets: $buckets"
     
     # Check if we found any buckets
     if [ -z "$buckets" ]; then
@@ -80,8 +83,12 @@ find_existing_bucket() {
     # Use the first bucket found (assuming it's the most recent)
     local bucket=$(echo "$buckets" | head -1)
     echo "Found existing Terraform state bucket: $bucket"
+    echo "DEBUG: Bucket name length: ${#bucket}"
     
-    echo "$bucket"
+    # Return just the bucket name without newline
+    printf "%s" "$bucket"
+}
+    printf "%s" "$bucket"
 }
 
 # Function to clone the GenAI Gateway repository
@@ -167,9 +174,21 @@ setup_environment_delete() {
     
     # Find existing Terraform state bucket
     TERRAFORM_S3_BUCKET_NAME=$(find_existing_bucket)
+    echo "DEBUG: Retrieved bucket name: '$TERRAFORM_S3_BUCKET_NAME'"
+    echo "DEBUG: Bucket name length: ${#TERRAFORM_S3_BUCKET_NAME}"
     
-    # Update the .env file with the existing bucket name
-    sed -i "s|^TERRAFORM_S3_BUCKET_NAME=.*|TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"|" .env
+    # Check if TERRAFORM_S3_BUCKET_NAME exists in .env
+    if grep -q "^TERRAFORM_S3_BUCKET_NAME=" .env; then
+        echo "DEBUG: Found TERRAFORM_S3_BUCKET_NAME line in .env"
+        # Update the existing line
+        sed -i "s|^TERRAFORM_S3_BUCKET_NAME=.*|TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"|" .env
+        echo "DEBUG: sed command exit status: $?"
+    else
+        echo "DEBUG: No TERRAFORM_S3_BUCKET_NAME line found in .env, adding it"
+        # Add the line if it doesn't exist
+        echo "TERRAFORM_S3_BUCKET_NAME=\"$TERRAFORM_S3_BUCKET_NAME\"" >> .env
+    fi
+    
     echo "Updated .env file with existing S3 bucket name: $TERRAFORM_S3_BUCKET_NAME"
 }
 
@@ -264,9 +283,15 @@ undeploy_genai_gateway() {
     echo "Initializing Terraform with remote state..."
     chmod +x deploy.sh
     
-    # We need to modify the deploy script to support initialization only
-    # For now, we'll try to run it with a special flag and catch any errors
-    ./deploy.sh init || echo "Continuing with undeploy despite initialization errors"
+    # Use --skip-build flag to initialize Terraform without rebuilding everything
+    echo "Running deploy.sh with --skip-build to initialize Terraform..."
+    ./deploy.sh --skip-build
+    
+    if [ $? -ne 0 ]; then
+        echo "Warning: Initialization with deploy.sh --skip-build had errors, but continuing with undeploy"
+    else
+        echo "Successfully initialized Terraform with remote state"
+    fi
     
     # Now run the undeploy script
     echo "Running undeploy script..."
