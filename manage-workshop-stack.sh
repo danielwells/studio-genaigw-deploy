@@ -155,32 +155,57 @@ deploy_genai_gateway() {
         exit 1
     fi
     
-    # Capture and store Terraform outputs
+    # Capture Terraform outputs for CloudFormation
     if [ -d "litellm-terraform-stack" ]; then
-        echo "Capturing Terraform outputs..."
+        echo "Capturing Terraform outputs for CloudFormation..."
         cd litellm-terraform-stack
         
-        # Create outputs directory in assets bucket if running in Workshop Studio
-        if [ "$IS_WORKSHOP_STUDIO_ENV" == "yes" ] && [ ! -z "$ASSETS_BUCKET_NAME" ] && [ ! -z "$ASSETS_BUCKET_PREFIX" ]; then
-            terraform output -json > /tmp/tf_outputs.json
+        # Get the outputs as JSON
+        terraform output -json > /tmp/tf_outputs.json
+        
+        # Extract key outputs
+        API_ENDPOINT=$(jq -r '.api_endpoint.value // "N/A"' /tmp/tf_outputs.json)
+        ADMIN_UI_URL=$(jq -r '.admin_ui_url.value // "N/A"' /tmp/tf_outputs.json)
+        ECS_CLUSTER_NAME=$(jq -r '.ecs_cluster_name.value // "N/A"' /tmp/tf_outputs.json)
+        RDS_INSTANCE_ID=$(jq -r '.rds_instance_id.value // "N/A"' /tmp/tf_outputs.json)
+        
+        # Extract the ARN from the Terraform state
+        SECRET_ARN=$(terraform state show 'module.base.aws_secretsmanager_secret.litellm_master_salt' | grep "arn" | head -1 | awk -F'"' '{print $2}')
+        
+        # Check if we got the ARN
+        if [ -z "$SECRET_ARN" ]; then
+            echo "Failed to extract ARN from Terraform state"
+            LITELLM_MASTER_KEY="N/A"
+        else
+            echo "Found Secret ARN: $SECRET_ARN"
             
-            # Create a markdown file with outputs
-            cat > /tmp/workshop-outputs.md << EOF
-# GenAI Gateway Workshop Outputs
-
-## API Endpoints
-- Gateway API: $(jq -r '.api_endpoint.value // "N/A"' /tmp/tf_outputs.json)
-- Admin UI: $(jq -r '.admin_ui_url.value // "N/A"' /tmp/tf_outputs.json)
-
-## Resources
-- ECS Cluster: $(jq -r '.ecs_cluster_name.value // "N/A"' /tmp/tf_outputs.json)
-- RDS Instance: $(jq -r '.rds_instance_id.value // "N/A"' /tmp/tf_outputs.json)
-EOF
+            # Use the ARN to get just the master key
+            LITELLM_MASTER_KEY=$(aws secretsmanager get-secret-value --secret-id "$SECRET_ARN" --query SecretString --output text | jq -r '.LITELLM_MASTER_KEY')
             
-            # Upload to S3 bucket
-            aws s3 cp /tmp/workshop-outputs.md s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}workshop-outputs.md
-            echo "Workshop outputs saved to s3://${ASSETS_BUCKET_NAME}/${ASSETS_BUCKET_PREFIX}workshop-outputs.md"
+            if [ -z "$LITELLM_MASTER_KEY" ]; then
+                echo "Failed to extract LITELLM_MASTER_KEY from secret"
+                LITELLM_MASTER_KEY="N/A"
+            fi
         fi
+        
+        # Set the login username
+        LOGIN_USERNAME="admin"
+        
+        # Export these as environment variables for CloudFormation
+        export CF_API_ENDPOINT="$API_ENDPOINT"
+        export CF_ADMIN_UI_URL="$ADMIN_UI_URL"
+        export CF_ECS_CLUSTER_NAME="$ECS_CLUSTER_NAME"
+        export CF_RDS_INSTANCE_ID="$RDS_INSTANCE_ID"
+        export CF_LITELLM_MASTER_KEY="$LITELLM_MASTER_KEY"
+        export CF_LOGIN_USERNAME="$LOGIN_USERNAME"
+        
+        # Print the outputs for logging (mask the master key for security)
+        echo "API Endpoint: $CF_API_ENDPOINT"
+        echo "Admin UI URL: $CF_ADMIN_UI_URL"
+        echo "ECS Cluster Name: $CF_ECS_CLUSTER_NAME"
+        echo "RDS Instance ID: $CF_RDS_INSTANCE_ID"
+        echo "LITELLM Master Key: [MASKED]"
+        echo "Login Username: $CF_LOGIN_USERNAME"
         
         cd ..
     fi

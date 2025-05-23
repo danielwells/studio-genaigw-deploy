@@ -225,7 +225,7 @@ Resources:
                 "commands": [
                   "if [ \"$CODEBUILD_BUILD_SUCCEEDING\" == \"1\" ]; then export STATUS=\"SUCCESS\"; fi",
                   "if [ \"$CODEBUILD_BUILD_SUCCEEDING\" != \"1\" ]; then export STATUS=\"FAILED\"; fi",
-                  "export JSON_DATA=\"{\\\"Status\\\" : \\\"$STATUS\\\", \\\"Reason\\\" : \\\"See the details in CloudWatch Log Stream: $CONTEXT_LOG_STREAM_NAME\\\", \\\"StackId\\\" : \\\"$EVENT_STACK_ID\\\", \\\"PhysicalResourceId\\\" : \\\"$CONTEXT_LOG_STREAM_NAME\\\", \\\"RequestId\\\" : \\\"$EVENT_REQUEST_ID\\\", \\\"LogicalResourceId\\\" : \\\"$EVENT_LOGICAL_RESOURCE_ID\\\" }\"",
+                  "export JSON_DATA=\"{\\\"Status\\\" : \\\"$STATUS\\\", \\\"Reason\\\" : \\\"See the details in CloudWatch Log Stream: $CONTEXT_LOG_STREAM_NAME\\\", \\\"StackId\\\" : \\\"$EVENT_STACK_ID\\\", \\\"PhysicalResourceId\\\" : \\\"$CONTEXT_LOG_STREAM_NAME\\\", \\\"RequestId\\\" : \\\"$EVENT_REQUEST_ID\\\", \\\"LogicalResourceId\\\" : \\\"$EVENT_LOGICAL_RESOURCE_ID\\\", \\\"Data\\\" : {\\\"ApiEndpoint\\\": \\\"$CF_API_ENDPOINT\\\", \\\"AdminUiUrl\\\": \\\"$CF_ADMIN_UI_URL\\\", \\\"EcsClusterName\\\": \\\"$CF_ECS_CLUSTER_NAME\\\", \\\"RdsInstanceId\\\": \\\"$CF_RDS_INSTANCE_ID\\\", \\\"LitellmMasterKey\\\": \\\"$CF_LITELLM_MASTER_KEY\\\", \\\"LoginUsername\\\": \\\"$CF_LOGIN_USERNAME\\\"}}\"",
                   "echo \"$JSON_DATA\"",
                   "curl -X PUT --data-binary \"$JSON_DATA\" \"$EVENT_RESPONSE_URL\""
                 ]
@@ -304,3 +304,22 @@ Resources:
           - Arn
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
+Outputs:
+  ApiEndpoint:
+    Description: "The API endpoint for the GenAI Gateway"
+    Value: !GetAtt CustomProvisioningResource.ApiEndpoint
+  AdminUiUrl:
+    Description: "The Admin UI URL for the GenAI Gateway"
+    Value: !GetAtt CustomProvisioningResource.AdminUiUrl
+  EcsClusterName:
+    Description: "The ECS Cluster Name for the GenAI Gateway"
+    Value: !GetAtt CustomProvisioningResource.EcsClusterName
+  RdsInstanceId:
+    Description: "The RDS Instance ID for the GenAI Gateway"
+    Value: !GetAtt CustomProvisioningResource.RdsInstanceId
+  LitellmMasterKey:
+    Description: "The LITELLM Master Key for the GenAI Gateway"
+    Value: !GetAtt CustomProvisioningResource.LitellmMasterKey
+  LoginUsername:
+    Description: "The login username for the GenAI Gateway"
+    Value: !GetAtt CustomProvisioningResource.LoginUsername
