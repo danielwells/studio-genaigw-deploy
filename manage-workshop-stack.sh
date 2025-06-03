@@ -337,6 +337,7 @@ EOF
     echo "CF_LOGIN_USERNAME=$CF_LOGIN_USERNAME"
     
     # Create a file in the workspace root that will be sourced by the buildspec post_build phase
+    echo "Creating exports file at $(pwd)/../cf_exports.sh"
     cat > ../cf_exports.sh << EOF
 export CF_API_ENDPOINT="$CF_API_ENDPOINT"
 export CF_ADMIN_UI_URL="$CF_ADMIN_UI_URL"
@@ -345,6 +346,20 @@ export CF_RDS_INSTANCE_ID="$CF_RDS_INSTANCE_ID"
 export CF_LITELLM_MASTER_KEY="$CF_LITELLM_MASTER_KEY"
 export CF_LOGIN_USERNAME="$CF_LOGIN_USERNAME"
 EOF
+    
+    # Verify the file was created and show its contents
+    if [ -f ../cf_exports.sh ]; then
+        echo "Exports file created successfully"
+        echo "File contents:"
+        cat ../cf_exports.sh
+        echo "File permissions:"
+        ls -la ../cf_exports.sh
+    else
+        echo "ERROR: Failed to create exports file"
+    fi
+    
+    # Show the absolute path for clarity
+    echo "Absolute path to exports file: $(realpath ../cf_exports.sh)"
     
     echo "Deployment completed successfully"
 }
