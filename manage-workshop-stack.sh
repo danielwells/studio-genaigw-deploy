@@ -353,6 +353,9 @@ EOF
 undeploy_genai_gateway() {
     echo "Undeploying GenAI Gateway..."
     
+    # Update Dockerfiles to use ECR Public Gallery for Python images
+    update_dockerfiles
+    
     # Run the deploy script first to initialize Terraform with the remote state
     echo "Initializing Terraform with remote state..."
     chmod +x deploy.sh
