@@ -289,40 +289,9 @@ EOF
         # Make the exports file executable
         chmod +x /tmp/cf_exports.sh
         
-        # Create a JSON file with the outputs for CloudFormation
-        cat > /tmp/cfn-outputs.json << EOF
-{
-  "APIEndpoint": "$CF_API_ENDPOINT",
-  "AdminUIURL": "$CF_ADMIN_UI_URL",
-  "ECSClusterName": "$CF_ECS_CLUSTER_NAME",
-  "RDSInstanceID": "$CF_RDS_INSTANCE_ID",
-  "LITELLMMasterKey": "$CF_LITELLM_MASTER_KEY",
-  "LoginUsername": "$CF_LOGIN_USERNAME"
-}
-EOF
-        
-        # Check if we're running as part of a CloudFormation stack
-        if [ -n "$CLOUDFORMATION_STACK_NAME" ]; then
-            echo "Updating CloudFormation stack outputs..."
-            
-            # Get the stack ID
-            STACK_ID=$(aws cloudformation describe-stacks --stack-name "$CLOUDFORMATION_STACK_NAME" --query "Stacks[0].StackId" --output text)
-            
-            if [ -n "$STACK_ID" ]; then
-                # Update the stack outputs
-                aws cloudformation update-stack --stack-name "$STACK_ID" \
-                    --use-previous-template \
-                    --parameters ParameterKey=OutputValues,ParameterValue="$(cat /tmp/cfn-outputs.json)" \
-                    --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM
-                
-                echo "CloudFormation stack outputs updated"
-            else
-                echo "Warning: Could not find CloudFormation stack ID"
-            fi
-        else
-            echo "Not running as part of a CloudFormation stack, skipping output update"
-            echo "To use these values in CloudFormation, you can manually update the stack with the values in /tmp/cfn-outputs.json"
-        fi
+        # Note: We're not attempting to update CloudFormation stack outputs directly.
+        # Outputs are properly passed back to CloudFormation through the custom resource
+        # response mechanism in the post_build phase of the CodeBuild project.
         
         cd ..
     fi
