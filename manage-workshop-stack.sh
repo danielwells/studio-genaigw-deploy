@@ -65,26 +65,26 @@ generate_unique_bucket_name() {
 
 # Function to find existing Terraform state bucket
 find_existing_bucket() {
-    echo "Finding existing Terraform state bucket..."
+    echo "Finding existing Terraform state bucket..." >&2
     
     # List buckets with the genai-gateway-tf-state prefix
     local account_id=$(aws sts get-caller-identity --query Account --output text)
-    echo "DEBUG: Account ID: $account_id"
+    echo "DEBUG: Account ID: $account_id" >&2
     
     local buckets=$(aws s3api list-buckets --query "Buckets[?starts_with(Name, 'genai-gateway-tf-state-${account_id}')].Name" --output text)
-    echo "DEBUG: Found buckets: $buckets"
+    echo "DEBUG: Found buckets: $buckets" >&2
     
     # Check if we found any buckets
     if [ -z "$buckets" ]; then
-        echo "Error: No existing Terraform state bucket found"
+        echo "Error: No existing Terraform state bucket found" >&2
         exit 1
     fi
     
     # Use the first bucket found (assuming it's the most recent)
     # Trim any whitespace or quotes that might be present
     local bucket=$(echo "$buckets" | head -1 | tr -d "'" | tr -d " ")
-    echo "Found existing Terraform state bucket: $bucket"
-    echo "DEBUG: Bucket name length: ${#bucket}"
+    echo "Found existing Terraform state bucket: $bucket" >&2
+    echo "DEBUG: Bucket name length: ${#bucket}" >&2
     
     # Return just the bucket name without newline or quotes
     echo -n "$bucket"
