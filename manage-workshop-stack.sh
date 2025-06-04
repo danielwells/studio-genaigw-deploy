@@ -234,7 +234,24 @@ deploy_genai_gateway() {
         API_ENDPOINT=$(jq -r '.ServiceURL.value // "N/A"' /tmp/tf_outputs.json)
         LITELLM_DASHBOARD_UI=$(jq -r '.ServiceURL.value // "N/A"' /tmp/tf_outputs.json)
         ECS_CLUSTER_NAME=$(jq -r '.LitellmEcsCluster.value // "N/A"' /tmp/tf_outputs.json)
-        RDS_INSTANCE_ID="N/A"  # No RDS instance ID in the outputs
+        
+        # Extract the RDS database identifier from Terraform state
+        RDS_INSTANCE_ID=$(terraform state show 'module.base.aws_db_instance.database' | grep -E "^    identifier[ ]+=" | awk -F= '{print $2}' | tr -d ' "')
+        if [ -z "$RDS_INSTANCE_ID" ]; then
+            echo "Failed to extract RDS identifier from Terraform state"
+            RDS_INSTANCE_ID="N/A"
+        else
+            echo "Found RDS Identifier: $RDS_INSTANCE_ID"
+        fi
+        
+        # Extract the ALB name from Terraform state
+        ALB_NAME=$(terraform state show 'module.ecs_cluster[0].aws_lb.this' | grep -E "^    name[ ]+=" | awk -F= '{print $2}' | tr -d ' "')
+        if [ -z "$ALB_NAME" ]; then
+            echo "Failed to extract ALB name from Terraform state"
+            ALB_NAME="N/A"
+        else
+            echo "Found ALB Name: $ALB_NAME"
+        fi
         
         # Extract the ARN from the Terraform state
         SECRET_ARN=$(terraform state show 'module.base.aws_secretsmanager_secret.litellm_master_salt' | grep "arn" | head -1 | awk -F'"' '{print $2}')
@@ -266,12 +283,14 @@ deploy_genai_gateway() {
         export CF_RDS_INSTANCE_ID="$RDS_INSTANCE_ID"
         export CF_LITELLM_MASTER_KEY="$LITELLM_MASTER_KEY"
         export CF_LOGIN_USERNAME="$LOGIN_USERNAME"
+        export CF_ALB_NAME="$ALB_NAME"
         
         # Print the outputs for logging (mask the master key for security)
         echo "API Endpoint: $CF_API_ENDPOINT"
         echo "Litellm Dashboard UI: $CF_LITELLM_DASHBOARD_UI"
         echo "ECS Cluster Name: $CF_ECS_CLUSTER_NAME"
         echo "RDS Instance ID: $CF_RDS_INSTANCE_ID"
+        echo "ALB Name: $CF_ALB_NAME"
         echo "LITELLM Master Key: [MASKED]"
         echo "Login Username: $CF_LOGIN_USERNAME"
         
@@ -284,6 +303,7 @@ export CF_ECS_CLUSTER_NAME="$CF_ECS_CLUSTER_NAME"
 export CF_RDS_INSTANCE_ID="$CF_RDS_INSTANCE_ID"
 export CF_LITELLM_MASTER_KEY="$CF_LITELLM_MASTER_KEY"
 export CF_LOGIN_USERNAME="$CF_LOGIN_USERNAME"
+export CF_ALB_NAME="$CF_ALB_NAME"
 EOF
         
         # Make the exports file executable
@@ -314,6 +334,7 @@ export CF_ECS_CLUSTER_NAME="$CF_ECS_CLUSTER_NAME"
 export CF_RDS_INSTANCE_ID="$CF_RDS_INSTANCE_ID"
 export CF_LITELLM_MASTER_KEY="$CF_LITELLM_MASTER_KEY"
 export CF_LOGIN_USERNAME="$CF_LOGIN_USERNAME"
+export CF_ALB_NAME="$CF_ALB_NAME"
 EOF
     
     # Verify the file was created and show its contents
