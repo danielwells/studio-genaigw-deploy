@@ -232,7 +232,7 @@ deploy_genai_gateway() {
         
         # Extract key outputs using the correct output names
         API_ENDPOINT=$(jq -r '.ServiceURL.value // "N/A"' /tmp/tf_outputs.json)
-        ADMIN_UI_URL=$(jq -r '.ServiceURL.value // "N/A"' /tmp/tf_outputs.json)
+        LITELLM_DASHBOARD_UI=$(jq -r '.ServiceURL.value // "N/A"' /tmp/tf_outputs.json)
         ECS_CLUSTER_NAME=$(jq -r '.LitellmEcsCluster.value // "N/A"' /tmp/tf_outputs.json)
         RDS_INSTANCE_ID="N/A"  # No RDS instance ID in the outputs
         
@@ -261,7 +261,7 @@ deploy_genai_gateway() {
         # Export these as environment variables for CloudFormation
         # Use 'export' to ensure they're available to the post_build phase
         export CF_API_ENDPOINT="$API_ENDPOINT"
-        export CF_ADMIN_UI_URL="$ADMIN_UI_URL"
+        export CF_LITELLM_DASHBOARD_UI="$LITELLM_DASHBOARD_UI"
         export CF_ECS_CLUSTER_NAME="$ECS_CLUSTER_NAME"
         export CF_RDS_INSTANCE_ID="$RDS_INSTANCE_ID"
         export CF_LITELLM_MASTER_KEY="$LITELLM_MASTER_KEY"
@@ -269,7 +269,7 @@ deploy_genai_gateway() {
         
         # Print the outputs for logging (mask the master key for security)
         echo "API Endpoint: $CF_API_ENDPOINT"
-        echo "Admin UI URL: $CF_ADMIN_UI_URL"
+        echo "Litellm Dashboard UI: $CF_LITELLM_DASHBOARD_UI"
         echo "ECS Cluster Name: $CF_ECS_CLUSTER_NAME"
         echo "RDS Instance ID: $CF_RDS_INSTANCE_ID"
         echo "LITELLM Master Key: [MASKED]"
@@ -279,7 +279,7 @@ deploy_genai_gateway() {
         # This ensures they're available even if the script exits
         cat > /tmp/cf_exports.sh << EOF
 export CF_API_ENDPOINT="$CF_API_ENDPOINT"
-export CF_ADMIN_UI_URL="$CF_ADMIN_UI_URL"
+export CF_LITELLM_DASHBOARD_UI="$CF_LITELLM_DASHBOARD_UI"
 export CF_ECS_CLUSTER_NAME="$CF_ECS_CLUSTER_NAME"
 export CF_RDS_INSTANCE_ID="$CF_RDS_INSTANCE_ID"
 export CF_LITELLM_MASTER_KEY="$CF_LITELLM_MASTER_KEY"
@@ -300,7 +300,7 @@ EOF
     # This is critical for CodeBuild to access these variables in the post_build phase
     echo "Exporting environment variables to parent process"
     echo "CF_API_ENDPOINT=$CF_API_ENDPOINT"
-    echo "CF_ADMIN_UI_URL=$CF_ADMIN_UI_URL"
+    echo "CF_LITELLM_DASHBOARD_UI=$CF_LITELLM_DASHBOARD_UI"
     echo "CF_ECS_CLUSTER_NAME=$CF_ECS_CLUSTER_NAME"
     echo "CF_RDS_INSTANCE_ID=$CF_RDS_INSTANCE_ID"
     echo "CF_LOGIN_USERNAME=$CF_LOGIN_USERNAME"
@@ -309,7 +309,7 @@ EOF
     echo "Creating exports file at $(pwd)/../cf_exports.sh"
     cat > ../cf_exports.sh << EOF
 export CF_API_ENDPOINT="$CF_API_ENDPOINT"
-export CF_ADMIN_UI_URL="$CF_ADMIN_UI_URL"
+export CF_LITELLM_DASHBOARD_UI="$CF_LITELLM_DASHBOARD_UI"
 export CF_ECS_CLUSTER_NAME="$CF_ECS_CLUSTER_NAME"
 export CF_RDS_INSTANCE_ID="$CF_RDS_INSTANCE_ID"
 export CF_LITELLM_MASTER_KEY="$CF_LITELLM_MASTER_KEY"

@@ -223,11 +223,34 @@ Resources:
               },
               "post_build": {
                 "commands": [
-                  "if [ \"$CODEBUILD_BUILD_SUCCEEDING\" == \"1\" ]; then export STATUS=\"SUCCESS\"; fi",
-                  "if [ \"$CODEBUILD_BUILD_SUCCEEDING\" != \"1\" ]; then export STATUS=\"FAILED\"; fi",
-                  "export JSON_DATA=\"{\\\"Status\\\" : \\\"$STATUS\\\", \\\"Reason\\\" : \\\"See the details in CloudWatch Log Stream: $CONTEXT_LOG_STREAM_NAME\\\", \\\"StackId\\\" : \\\"$EVENT_STACK_ID\\\", \\\"PhysicalResourceId\\\" : \\\"$CONTEXT_LOG_STREAM_NAME\\\", \\\"RequestId\\\" : \\\"$EVENT_REQUEST_ID\\\", \\\"LogicalResourceId\\\" : \\\"$EVENT_LOGICAL_RESOURCE_ID\\\", \\\"Data\\\" : {\\\"ApiEndpoint\\\": \\\"$CF_API_ENDPOINT\\\", \\\"AdminUiUrl\\\": \\\"$CF_ADMIN_UI_URL\\\", \\\"EcsClusterName\\\": \\\"$CF_ECS_CLUSTER_NAME\\\", \\\"RdsInstanceId\\\": \\\"$CF_RDS_INSTANCE_ID\\\", \\\"LitellmMasterKey\\\": \\\"$CF_LITELLM_MASTER_KEY\\\", \\\"LoginUsername\\\": \\\"$CF_LOGIN_USERNAME\\\"}}\"",
-                  "echo \"$JSON_DATA\"",
-                  "curl -X PUT --data-binary \"$JSON_DATA\" \"$EVENT_RESPONSE_URL\""
+                  "if [ \"$CODEBUILD_BUILD_SUCCEEDING\" == \"1\" ]; then export STATUS=\"SUCCESS\"; else export STATUS=\"FAILED\"; fi",
+                  
+                  "# Create response JSON using heredoc (cleaner approach)",
+                  "cat > /tmp/response.json << EOF
+{
+  \"Status\": \"$STATUS\",
+  \"Reason\": \"See the details in CloudWatch Log Stream: $CONTEXT_LOG_STREAM_NAME\",
+  \"StackId\": \"$EVENT_STACK_ID\",
+  \"PhysicalResourceId\": \"$CONTEXT_LOG_STREAM_NAME\",
+  \"RequestId\": \"$EVENT_REQUEST_ID\",
+  \"LogicalResourceId\": \"$EVENT_LOGICAL_RESOURCE_ID\",
+  \"Data\": {
+    \"ApiEndpoint\": \"$CF_API_ENDPOINT\",
+    \"LitellmDashboardUI\": \"$CF_LITELLM_DASHBOARD_UI\",
+    \"EcsClusterName\": \"$CF_ECS_CLUSTER_NAME\",
+    \"RdsInstanceId\": \"$CF_RDS_INSTANCE_ID\",
+    \"LitellmMasterKey\": \"$CF_LITELLM_MASTER_KEY\",
+    \"LoginUsername\": \"$CF_LOGIN_USERNAME\"
+  }
+}
+EOF",
+                  
+                  "# Show the response for debugging",
+                  "echo \"Response JSON:\"",
+                  "cat /tmp/response.json",
+                  
+                  "# Send the response",
+                  "curl -X PUT --data-binary @/tmp/response.json \"$EVENT_RESPONSE_URL\""
                 ]
               }
             }
@@ -308,9 +331,9 @@ Outputs:
   ApiEndpoint:
     Description: "The API endpoint for the GenAI Gateway"
     Value: !GetAtt CustomProvisioningResource.ApiEndpoint
-  AdminUiUrl:
-    Description: "The Admin UI URL for the GenAI Gateway"
-    Value: !GetAtt CustomProvisioningResource.AdminUiUrl
+  LitellmDashboardUI:
+    Description: "The Litellm Dashboard UI for the GenAI Gateway"
+    Value: !GetAtt CustomProvisioningResource.LitellmDashboardUI
   EcsClusterName:
     Description: "The ECS Cluster Name for the GenAI Gateway"
     Value: !GetAtt CustomProvisioningResource.EcsClusterName
