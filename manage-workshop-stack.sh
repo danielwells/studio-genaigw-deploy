@@ -90,6 +90,45 @@ find_existing_bucket() {
     echo -n "$bucket"
 }
 
+# Function to create provider lock file with known working versions
+create_provider_lock_file() {
+    echo "Creating provider lock file with known working versions..."
+    
+    cat > litellm-terraform-stack/.terraform.lock.hcl << 'EOF'
+# This file is maintained automatically by "terraform init".
+# Manual edits may be lost in future updates.
+
+provider "registry.terraform.io/hashicorp/aws" {
+  version     = "5.98.0"
+  constraints = ">= 4.0.0, >= 5.34.0"
+}
+
+provider "registry.terraform.io/hashicorp/helm" {
+  version = "2.17.0"
+}
+
+provider "registry.terraform.io/hashicorp/kubernetes" {
+  version     = "2.37.1"
+  constraints = ">= 2.20.0"
+}
+
+provider "registry.terraform.io/hashicorp/random" {
+  version = "3.7.2"
+}
+
+provider "registry.terraform.io/hashicorp/time" {
+  version     = "0.13.1"
+  constraints = ">= 0.13.0"
+}
+
+provider "registry.terraform.io/hashicorp/tls" {
+  version = "4.1.0"
+}
+EOF
+    
+    echo "✓ Provider lock file created with known working versions"
+}
+
 # Function to clone the GenAI Gateway repository
 clone_repository() {
     echo "Cloning GenAI Gateway repository..."
@@ -103,6 +142,9 @@ clone_repository() {
         fi
     fi
     cd "$REPO_DIR"
+    
+    # Pin provider versions to known working versions
+    create_provider_lock_file
 }
 
 # Function to update Dockerfiles to use ECR Public Gallery for Python images
