@@ -235,10 +235,17 @@ setup_environment_delete() {
 
 # Function to configure guardrails and advanced routing
 configure_guardrails_and_routing() {
-    echo "Configuring guardrails and advanced routing..."
+    echo "Configuring guardrails..."
     echo "PII Guardrail ID: $PII_GUARDRAIL_ID"
     echo "Topic Guardrail ID: $TOPIC_GUARDRAIL_ID"
     echo "Current working directory: $(pwd)"
+    
+    # Get the current AWS region dynamically
+    local aws_region=$(aws configure get region)
+    if [ -z "$aws_region" ]; then
+        aws_region="us-east-1"
+    fi
+    echo "Using AWS region: $aws_region"
     
     # Check if config file exists (we should already be in the genai-gateway directory)
     if [ ! -f "config/default-config-base.yaml" ]; then
@@ -248,16 +255,18 @@ configure_guardrails_and_routing() {
         exit 1
     fi
 
-    # Add guardrails configuration to base config
+    # Add guardrails configuration - PII masking on output only
     echo "Adding guardrails configuration..."
     yq eval '.guardrails = [
         {
             "guardrail_name": "pii-protection",
             "litellm_params": {
                 "guardrail": "bedrock",
-                "mode": "during_call",
+                "mode": "pre_call",
                 "guardrailIdentifier": "'$PII_GUARDRAIL_ID'",
                 "guardrailVersion": "DRAFT",
+                "aws_region_name": "'$aws_region'",
+                "mask_response_content": true,
                 "default_on": true
             }
         },
@@ -265,9 +274,10 @@ configure_guardrails_and_routing() {
             "guardrail_name": "topic-filter",
             "litellm_params": {
                 "guardrail": "bedrock",
-                "mode": "during_call",
+                "mode": "post_call",
                 "guardrailIdentifier": "'$TOPIC_GUARDRAIL_ID'",
                 "guardrailVersion": "DRAFT",
+                "aws_region_name": "'$aws_region'",
                 "default_on": false
             }
         }
@@ -281,7 +291,7 @@ configure_guardrails_and_routing() {
     yq eval '.router_settings.default_fallbacks = ["anthropic.claude-3-haiku-20240307-v1:0"]' -i config/default-config-base.yaml
     echo "✓ Routing configuration added"
 
-    echo "Base configuration updated with guardrails and routing"
+    echo "Guardrails configuration complete"
 }
 
 # Function to deploy the GenAI Gateway
