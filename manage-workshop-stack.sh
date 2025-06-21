@@ -238,12 +238,13 @@ configure_guardrails_and_routing() {
     echo "Configuring guardrails and advanced routing..."
     echo "PII Guardrail ID: $PII_GUARDRAIL_ID"
     echo "Topic Guardrail ID: $TOPIC_GUARDRAIL_ID"
-
-    cd genai-gateway
+    echo "Current working directory: $(pwd)"
     
-    # Check if config file exists
+    # Check if config file exists (we should already be in the genai-gateway directory)
     if [ ! -f "config/default-config-base.yaml" ]; then
         echo "ERROR: config/default-config-base.yaml not found"
+        echo "Available files in current directory:"
+        ls -la
         exit 1
     fi
 
@@ -281,8 +282,6 @@ configure_guardrails_and_routing() {
     echo "✓ Routing configuration added"
 
     echo "Base configuration updated with guardrails and routing"
-    
-    cd ..
 }
 
 # Function to deploy the GenAI Gateway
