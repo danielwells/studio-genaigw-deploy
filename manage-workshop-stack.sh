@@ -233,6 +233,48 @@ setup_environment_delete() {
     echo "Updated .env file with existing S3 bucket name: $TERRAFORM_S3_BUCKET_NAME"
 }
 
+# Function to configure guardrails and advanced routing
+configure_guardrails_and_routing() {
+    echo "Configuring guardrails and advanced routing..."
+    echo "PII Guardrail ID: $PII_GUARDRAIL_ID"
+    echo "Topic Guardrail ID: $TOPIC_GUARDRAIL_ID"
+
+    cd genai-gateway
+
+    # Add guardrails configuration to base config
+    yq eval '.guardrails = [
+        {
+            "guardrail_name": "pii-protection",
+            "litellm_params": {
+                "guardrail": "bedrock",
+                "mode": "during_call",
+                "guardrailIdentifier": "'$PII_GUARDRAIL_ID'",
+                "guardrailVersion": "DRAFT",
+                "default_on": true
+            }
+        },
+        {
+            "guardrail_name": "topic-filter",
+            "litellm_params": {
+                "guardrail": "bedrock",
+                "mode": "during_call",
+                "guardrailIdentifier": "'$TOPIC_GUARDRAIL_ID'",
+                "guardrailVersion": "DRAFT",
+                "default_on": false
+            }
+        }
+    ]' -i config/default-config-base.yaml
+
+    # Add advanced routing configuration to base config
+    yq eval '.router_settings.routing_strategy = "usage-based-routing-v2"' -i config/default-config-base.yaml
+    yq eval '.router_settings.enable_pre_call_check = true' -i config/default-config-base.yaml
+    yq eval '.router_settings.default_fallbacks = ["anthropic.claude-3-haiku-20240307-v1:0"]' -i config/default-config-base.yaml
+
+    echo "Base configuration updated with guardrails and routing"
+    
+    cd ..
+}
+
 # Function to deploy the GenAI Gateway
 deploy_genai_gateway() {
     echo "Deploying GenAI Gateway..."
@@ -436,6 +478,7 @@ check_prerequisites
 if [[ "$STACK_OPERATION_LOWER" == "create" || "$STACK_OPERATION_LOWER" == "update" ]]; then
     clone_repository
     setup_environment_create
+    configure_guardrails_and_routing
     deploy_genai_gateway
     
     # Return to the original directory
