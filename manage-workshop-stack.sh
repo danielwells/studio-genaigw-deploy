@@ -266,6 +266,7 @@ configure_guardrails_and_routing() {
                 "guardrailIdentifier": "'$PII_GUARDRAIL_ID'",
                 "guardrailVersion": "DRAFT",
                 "aws_region_name": "'$aws_region'",
+                "mask_request_content": true,
                 "mask_response_content": true,
                 "default_on": true
             }
