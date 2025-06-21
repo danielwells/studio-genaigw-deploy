@@ -240,8 +240,15 @@ configure_guardrails_and_routing() {
     echo "Topic Guardrail ID: $TOPIC_GUARDRAIL_ID"
 
     cd genai-gateway
+    
+    # Check if config file exists
+    if [ ! -f "config/default-config-base.yaml" ]; then
+        echo "ERROR: config/default-config-base.yaml not found"
+        exit 1
+    fi
 
     # Add guardrails configuration to base config
+    echo "Adding guardrails configuration..."
     yq eval '.guardrails = [
         {
             "guardrail_name": "pii-protection",
@@ -264,11 +271,14 @@ configure_guardrails_and_routing() {
             }
         }
     ]' -i config/default-config-base.yaml
+    echo "✓ Guardrails added"
 
     # Add advanced routing configuration to base config
+    echo "Adding routing configuration..."
     yq eval '.router_settings.routing_strategy = "usage-based-routing-v2"' -i config/default-config-base.yaml
     yq eval '.router_settings.enable_pre_call_check = true' -i config/default-config-base.yaml
     yq eval '.router_settings.default_fallbacks = ["anthropic.claude-3-haiku-20240307-v1:0"]' -i config/default-config-base.yaml
+    echo "✓ Routing configuration added"
 
     echo "Base configuration updated with guardrails and routing"
     
