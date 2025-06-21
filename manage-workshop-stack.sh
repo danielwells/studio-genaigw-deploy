@@ -285,12 +285,41 @@ configure_guardrails_and_routing() {
     ]' -i config/default-config-base.yaml
     echo "✓ Guardrails added"
 
-    # Add advanced routing configuration to base config
-    echo "Adding routing configuration..."
-    yq eval '.router_settings.routing_strategy = "usage-based-routing-v2"' -i config/default-config-base.yaml
-    yq eval '.router_settings.enable_pre_call_check = true' -i config/default-config-base.yaml
-    yq eval '.router_settings.default_fallbacks = ["anthropic.claude-3-haiku-20240307-v1:0"]' -i config/default-config-base.yaml
-    echo "✓ Routing configuration added"
+    # Add advanced routing demo models to base config
+    echo "Adding advanced routing demo models..."
+    yq eval '.model_list += [
+        {
+            "model_name": "routing-demo-ab",
+            "litellm_params": {
+                "model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0",
+                "weight": 7
+            }
+        },
+        {
+            "model_name": "routing-demo-ab",
+            "litellm_params": {
+                "model": "bedrock/us.amazon.nova-pro-v1:0",
+                "weight": 3
+            }
+        },
+        {
+            "model_name": "routing-demo-load",
+            "tpm": 1000,
+            "rpm": 10,
+            "litellm_params": {
+                "model": "bedrock/us.anthropic.claude-3-7-sonnet-20250219-v1:0"
+            }
+        },
+        {
+            "model_name": "routing-demo-load",
+            "tpm": 2000,
+            "rpm": 20,
+            "litellm_params": {
+                "model": "bedrock/us.amazon.nova-pro-v1:0"
+            }
+        }
+    ]' -i config/default-config-base.yaml
+    echo "✓ Advanced routing demo models added"
 
     echo "Guardrails configuration complete"
 }
