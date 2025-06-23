@@ -255,7 +255,7 @@ configure_guardrails_and_routing() {
         exit 1
     fi
 
-    # Add guardrails configuration - PII masking on output only
+    # Add guardrails configuration
     echo "Adding guardrails configuration..."
     yq eval '.guardrails = [
         {
@@ -266,8 +266,6 @@ configure_guardrails_and_routing() {
                 "guardrailIdentifier": "'$PII_GUARDRAIL_ID'",
                 "guardrailVersion": "DRAFT",
                 "aws_region_name": "'$aws_region'",
-                "mask_request_content": true,
-                "mask_response_content": true,
                 "default_on": true
             }
         },
@@ -283,6 +281,26 @@ configure_guardrails_and_routing() {
             }
         }
     ]' -i config/default-config-base.yaml
+    
+    # NOTE: PII Masking configuration below is supported in later versions of LiteLLM
+    # The current version we are using only supports blocking, not masking
+    # Future version configuration (commented out):
+    #
+    # yq eval '.guardrails = [
+    #     {
+    #         "guardrail_name": "pii-protection",
+    #         "litellm_params": {
+    #             "guardrail": "bedrock",
+    #             "mode": "pre_call",
+    #             "guardrailIdentifier": "'$PII_GUARDRAIL_ID'",
+    #             "guardrailVersion": "DRAFT",
+    #             "aws_region_name": "'$aws_region'",
+    #             "mask_request_content": true,
+    #             "mask_response_content": true,
+    #             "default_on": true
+    #         }
+    #     }
+    # ]' -i config/default-config-base.yaml
     echo "✓ Guardrails added"
 
     # Add advanced routing demo models to base config
