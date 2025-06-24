@@ -262,7 +262,7 @@ configure_guardrails_and_routing() {
             "guardrail_name": "pii-protection",
             "litellm_params": {
                 "guardrail": "bedrock",
-                "mode": "pre_call",
+                "mode": "post_call",
                 "guardrailIdentifier": "'$PII_GUARDRAIL_ID'",
                 "guardrailVersion": "DRAFT",
                 "aws_region_name": "'$aws_region'",
