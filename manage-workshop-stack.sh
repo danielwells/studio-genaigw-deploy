@@ -238,6 +238,7 @@ configure_guardrails_and_routing() {
     echo "Configuring guardrails..."
     echo "PII Guardrail ID: $PII_GUARDRAIL_ID"
     echo "Topic Guardrail ID: $TOPIC_GUARDRAIL_ID"
+    echo "Topic Guardrail ID: $INVESTMENT_GUARDRAIL_ID"
     echo "Current working directory: $(pwd)"
     
     # Get the current AWS region dynamically
@@ -278,6 +279,17 @@ configure_guardrails_and_routing() {
                 "guardrailVersion": "DRAFT",
                 "aws_region_name": "'$aws_region'",
                 "default_on": false
+            }
+        },
+        {
+            "guardrail_name": "investment-guardrail",
+            "litellm_params": {
+                "guardrail": "bedrock",
+                "mode": "during_call",
+                "guardrailIdentifier": "'$INVESTMENT_GUARDRAIL_ID'",
+                "guardrailVersion": "DRAFT",
+                "aws_region_name": "'$aws_region'",
+                "default_on": true
             }
         }
     ]' -i config/default-config-base.yaml
