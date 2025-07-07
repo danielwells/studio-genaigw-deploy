@@ -238,7 +238,7 @@ configure_guardrails_and_routing() {
     echo "Configuring guardrails..."
     echo "PII Guardrail ID: $PII_GUARDRAIL_ID"
     echo "Topic Guardrail ID: $TOPIC_GUARDRAIL_ID"
-    echo "Topic Guardrail ID: $INVESTMENT_GUARDRAIL_ID"
+    echo "Investment Guardrail ID: $INVESTMENT_GUARDRAIL_ID"
     echo "Current working directory: $(pwd)"
     
     # Get the current AWS region dynamically
